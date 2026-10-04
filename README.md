@@ -126,9 +126,32 @@ pytest -q
 - M1a: text normalization + word-level matcher ✅
 - M1b: audio gateway + Quran ASR worker ✅ code path
 - M1c: validate with real recitation recordings
-- M2: Telegram voice-message integration
+- M2: Telegram voice-message integration ✅ webhook code
 - M3: reference recitation snippets
 - M4: forced alignment + madd
 - M5: ghunnah/qalqalah/tafkhim-tarqiq
 - M6: phoneme/makhraj scoring
 - M7: teacher review loop + calibration dataset
+
+
+## Telegram webhook MVP
+
+Required environment variables:
+
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET` (recommended)
+
+User flow:
+
+1. Send `/tahsin 1 2`
+2. Bot replies with the selected ayat
+3. Reply to that bot message with a Telegram voice note
+4. The bot downloads the OGG voice file, runs the Quran ASR pipeline, and replies with word-level corrections
+
+Webhook endpoint:
+
+`POST /telegram/webhook`
+
+The Telegram webhook should be configured with the same secret value used in `TELEGRAM_WEBHOOK_SECRET` so incoming requests carry the `X-Telegram-Bot-Api-Secret-Token` header.
+
+For the MVP, voice notes are limited to roughly 4 MB and the available Quran reference set is still Al-Fatihah.
