@@ -1,3 +1,4 @@
+import os
 import tempfile
 from pathlib import Path
 
@@ -43,7 +44,7 @@ def health():
         "milestone": "M2-telegram-webhook",
         "asr_mode": describe_asr_mode(),
         "persistence_configured": persistence_configured(),
-        "telegram_configured": bool(__import__("os").getenv("TELEGRAM_BOT_TOKEN")),
+        "telegram_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
     }
 
 
