@@ -31,4 +31,4 @@ def test_format_analysis_shows_incorrect_word():
     assert "75.0%" in text
     assert "العالمين" in text
     assert "العالمون" in text
-    assert "tahsin" not in text.lower()
+    assert "semakan tahsin" in text.lower()
