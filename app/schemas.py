@@ -18,6 +18,9 @@ class AnalysisResponse(BaseModel):
     ayah: int
     expected_text: str
     transcription: str
+    asr_mode: str
+    recitation_id: str | None = None
+    persistence_status: str
     accuracy_pct: float
     counts: dict[str, int]
     word_alignment: list[WordAlignment]

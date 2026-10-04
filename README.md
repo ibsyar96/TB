@@ -2,41 +2,62 @@
 
 AI-assisted Quran recitation analysis for Telegram.
 
-## Milestone 1
+## Current milestone
 
-The first milestone is intentionally narrow:
+The project now has a two-layer audio architecture:
 
-1. User selects a known Quran verse.
-2. Audio is transcribed with a Quran-specific ASR adapter.
-3. The transcription is normalized and aligned word-by-word with the canonical verse.
-4. The API returns structured JSON: correct, incorrect, missed, and extra words.
+```text
+Telegram / client
+      |
+      v
+Vercel FastAPI gateway
+      |
+      | raw audio
+      v
+Quran ASR worker
+  - ffmpeg -> mono 16 kHz WAV
+  - tarteel-ai/whisper-base-ar-quran
+      |
+      v
+word-level matcher
+      |
+      +--> structured response
+      |
+      +--> optional Supabase persistence
+```
+
+The heavy Torch/Transformers model is intentionally kept out of the Vercel gateway. The gateway can call a separate worker using `TAHSIN_WORKER_URL`.
 
 Initial reference set: **Surah Al-Fatihah**.
 
-> This milestone detects lexical/word-level recitation errors. It does **not** yet claim to judge makhraj, madd duration, ghunnah, qalqalah, or other acoustic tajwid features.
-
-## Architecture
-
-```text
-Audio
-  -> Quran ASR adapter
-  -> Arabic normalization
-  -> word alignment
-  -> analysis JSON
-```
-
-The ASR layer is deliberately replaceable. The initial worker adapter targets `tarteel-ai/whisper-base-ar-quran`, while later milestones can add forced alignment and tajwid-aware phoneme/acoustic analysis.
+> Current error detection is lexical/word-level. It does not yet claim to judge makhraj, madd duration, ghunnah, qalqalah, tafkhim/tarqiq, or other acoustic tajwid features.
 
 ## API
 
+- `GET /`
 - `GET /health`
 - `GET /v1/quran/1`
 - `POST /v1/analyze/transcript`
 - `POST /v1/analyze/audio`
 
-## Local quick start
+### Example transcript test
 
-Core/API:
+```bash
+curl -X POST http://127.0.0.1:8000/v1/analyze/transcript \
+  -H "Content-Type: application/json" \
+  -d '{"surah":1,"ayah":2,"transcription":"الحمد لله رب العالمين"}'
+```
+
+### Example audio test
+
+```bash
+curl -X POST http://127.0.0.1:8000/v1/analyze/audio \
+  -F surah=1 \
+  -F ayah=2 \
+  -F audio=@recitation.ogg
+```
+
+## Run the gateway locally
 
 ```bash
 python -m venv .venv
@@ -45,25 +66,66 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
-For real audio ASR:
+Without an ASR worker, transcript analysis works and the audio endpoint intentionally returns HTTP 503.
+
+## Run the ASR worker locally
+
+System requirement: `ffmpeg`.
 
 ```bash
 pip install -r requirements-worker.txt
+TAHSIN_LOCAL_ASR=1 uvicorn worker.main:app --host 0.0.0.0 --port 8001
 ```
 
-The ASR model is loaded lazily only when the audio endpoint is used.
-
-## Example transcript analysis
+Then point the gateway to it:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/v1/analyze/transcript \
-  -H "Content-Type: application/json" \
-  -d '{"surah":1,"ayah":2,"transcription":"الحمد لله رب العالمين"}'
+TAHSIN_WORKER_URL=http://127.0.0.1:8001 \
+uvicorn app.main:app --reload
+```
+
+A container definition is available at `Dockerfile.worker`.
+
+## Environment variables
+
+Gateway:
+
+- `TAHSIN_WORKER_URL` - ASR worker base URL
+- `TAHSIN_WORKER_TOKEN` - optional shared secret for gateway -> worker
+- `TAHSIN_WORKER_TIMEOUT` - defaults to 120 seconds
+- `SUPABASE_URL` - optional
+- `SUPABASE_SECRET_KEY` or `SUPABASE_SERVICE_ROLE_KEY` - server-only; never expose in a browser
+
+Worker:
+
+- `TAHSIN_ASR_MODEL` - defaults to `tarteel-ai/whisper-base-ar-quran`
+- `TAHSIN_WORKER_TOKEN` - optional shared secret
+- `TAHSIN_MAX_AUDIO_BYTES` - defaults to 20 MB
+
+## Database
+
+The Supabase schema is stored in `supabase/schema.sql`.
+
+Tables:
+
+- `tahsin_users`
+- `recitations`
+- `recitation_words`
+
+RLS is enabled and anonymous/authenticated table access is revoked for the MVP. Writes are intended to happen only from trusted server code.
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
 ```
 
 ## Roadmap
 
-- M1: Quran ASR + word-level error JSON
+- M1a: text normalization + word-level matcher ✅
+- M1b: audio gateway + Quran ASR worker ✅ code path
+- M1c: validate with real recitation recordings
 - M2: Telegram voice-message integration
 - M3: reference recitation snippets
 - M4: forced alignment + madd
