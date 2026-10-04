@@ -1,0 +1,27 @@
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV HF_HOME=/opt/huggingface
+ENV HF_HUB_DISABLE_TELEMETRY=1
+ENV TAHSIN_LOCAL_ASR=1
+ENV TAHSIN_ASR_MODEL=/opt/models/tarteel-quran-asr
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt requirements-worker.txt ./
+RUN pip install --no-cache-dir -r requirements-worker.txt
+
+# Bake the Quran ASR model into the image so cold starts do not need
+# to download model files from Hugging Face.
+RUN python -c "from huggingface_hub import snapshot_download; snapshot_download(repo_id='tarteel-ai/whisper-base-ar-quran', local_dir='/opt/models/tarteel-quran-asr')"
+
+COPY app ./app
+COPY supabase ./supabase
+COPY main.py ./
+
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-3000}"]
