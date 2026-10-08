@@ -2,7 +2,7 @@ import {createHash,timingSafeEqual} from 'node:crypto';
 import {lookup} from 'node:dns/promises';
 // One-time administration endpoint; remove immediately after Telegram confirms the webhook.
 // No Telegram tokens or authorisation secrets are included in source code.
-const fingerprint='a17c0c2183e85faf4fc4a5b15089baea';
+const fingerprint='2990774cde11f780f10002e714129527';
 const host='dalil-tajwid-bot-tahsin-bot.vercel.app';
 const url='https://'+host+'/api/telegram';
 const gate=x=>{
