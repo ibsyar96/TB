@@ -155,3 +155,26 @@ Webhook endpoint:
 The Telegram webhook should be configured with the same secret value used in `TELEGRAM_WEBHOOK_SECRET` so incoming requests carry the `X-Telegram-Bot-Api-Secret-Token` header.
 
 For the MVP, voice notes are limited to roughly 4 MB and the available Quran reference set is still Al-Fatihah.
+
+
+## Accuracy Lab and phoneme ground truth
+
+Tahsin Bot now separates two evidence levels:
+
+1. **Contract benchmark** — synthetic deterministic cases that protect software behavior.
+2. **Teacher-labelled audio benchmark** — real recitation recordings labelled by a qualified teacher. Only this tier can support real-world accuracy claims.
+
+Run the contract gate:
+
+```bash
+python scripts/run_accuracy_lab.py
+```
+
+Quranic expected pronunciation is generated with `quranic-phonemizer==3.0.1` (Hafs by default), including phoneme tokens and tajweed rule IDs.
+
+New endpoints:
+
+- `GET /v1/quran/{surah}/{ayah}/pronunciation`
+- `POST /v1/analyze/phonemes`
+
+The phoneme endpoint is intentionally model-agnostic: a future audio phoneme recognizer can submit observed phonemes, while the same deterministic alignment layer scores substitutions, deletions, and insertions.
