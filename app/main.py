@@ -7,8 +7,15 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
 from app.asr.factory import ASRNotConfigured, describe_asr_mode
 from app.persistence.supabase import persistence_configured
+from app.phonetics.alignment import analyze_phonemes
+from app.phonetics.reference import expected_pronunciation
 from app.quran.data import get_surah
-from app.schemas import AnalysisResponse, TranscriptAnalysisRequest
+from app.schemas import (
+    AnalysisResponse,
+    PhonemeAnalysisRequest,
+    PhonemeAnalysisResponse,
+    TranscriptAnalysisRequest,
+)
 from app.services.recitation import (
     AyahNotAvailable,
     EmptyTranscription,
@@ -19,7 +26,7 @@ from app.telegram.router import router as telegram_router
 
 app = FastAPI(
     title="Tahsin Bot API",
-    version="0.3.0",
+    version="0.4.0",
     description="Quran recitation analysis gateway and Telegram webhook.",
 )
 
@@ -30,7 +37,7 @@ app.include_router(telegram_router)
 def root():
     return {
         "name": "Tahsin Bot API",
-        "version": "0.3.0",
+        "version": "0.4.0",
         "docs": "/docs",
         "health": "/health",
         "telegram_webhook": "/telegram/webhook",
@@ -41,7 +48,7 @@ def root():
 def health():
     return {
         "status": "ok",
-        "milestone": "M2-telegram-webhook",
+        "milestone": "M3-accuracy-lab-phoneme-ground-truth",
         "asr_mode": describe_asr_mode(),
         "persistence_configured": persistence_configured(),
         "telegram_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
@@ -107,3 +114,44 @@ async def analyze_audio(
             ) from exc
     finally:
         temp_path.unlink(missing_ok=True)
+
+
+@app.get("/v1/quran/{surah}/{ayah}/pronunciation")
+def quran_pronunciation(surah: int, ayah: int):
+    try:
+        pronunciation = expected_pronunciation(surah, ayah)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Pronunciation reference unavailable: {exc}",
+        ) from exc
+
+    return {
+        "surah": surah,
+        "ayah": ayah,
+        **pronunciation,
+    }
+
+
+@app.post("/v1/analyze/phonemes", response_model=PhonemeAnalysisResponse)
+def analyze_observed_phonemes(payload: PhonemeAnalysisRequest):
+    try:
+        pronunciation = expected_pronunciation(payload.surah, payload.ayah)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Pronunciation reference unavailable: {exc}",
+        ) from exc
+
+    expected = pronunciation["phonemes"]
+    analysis = analyze_phonemes(expected, payload.observed_phonemes)
+
+    return {
+        "surah": payload.surah,
+        "ayah": payload.ayah,
+        "reference_text": pronunciation["text"],
+        "rule_ids": pronunciation["rule_ids"],
+        "expected_phonemes": expected,
+        "observed_phonemes": payload.observed_phonemes,
+        **analysis,
+    }
