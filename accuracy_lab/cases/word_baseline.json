@@ -1,0 +1,45 @@
+[
+  {
+    "id": "fatiha-1-2-perfect",
+    "surah": 1,
+    "ayah": 2,
+    "transcription": "الحمد لله رب العالمين",
+    "expected_errors": []
+  },
+  {
+    "id": "fatiha-1-2-missing-rabb",
+    "surah": 1,
+    "ayah": 2,
+    "transcription": "الحمد لله العالمين",
+    "expected_errors": [
+      {"status": "missed", "expected": "رب", "heard": null}
+    ]
+  },
+  {
+    "id": "fatiha-1-2-substitute-aalameen",
+    "surah": 1,
+    "ayah": 2,
+    "transcription": "الحمد لله رب العالمون",
+    "expected_errors": [
+      {"status": "incorrect", "expected": "العالمين", "heard": "العالمون"}
+    ]
+  },
+  {
+    "id": "fatiha-1-2-extra-alhamdu",
+    "surah": 1,
+    "ayah": 2,
+    "transcription": "الحمد الحمد لله رب العالمين",
+    "expected_errors": [
+      {"status": "extra", "expected": null, "heard": "الحمد"}
+    ]
+  },
+  {
+    "id": "fatiha-1-6-missing-mustaqeem",
+    "surah": 1,
+    "ayah": 6,
+    "transcription": "اهدنا الصراط",
+    "expected_errors": [
+      {"status": "missed", "expected": "المستقيم", "heard": null}
+    ]
+  }
+]
