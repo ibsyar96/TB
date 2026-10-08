@@ -1,10 +1,13 @@
 import json
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from app.accuracy.evaluator import evaluate_word_cases, quality_gate
 from app.phonetics.alignment import analyze_phonemes
-
-ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_json(path: str):
