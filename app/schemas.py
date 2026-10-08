@@ -49,3 +49,33 @@ class PhonemeAnalysisResponse(BaseModel):
     phoneme_error_rate_pct: float
     counts: dict[str, int]
     alignment: list[PhonemeAlignmentItem]
+
+
+class AlignmentToken(BaseModel):
+    token: str
+    token_id: int
+    start_ms: float
+    end_ms: float
+    confidence: float
+
+
+class AlignmentWord(BaseModel):
+    text: str
+    start_ms: float
+    end_ms: float
+    confidence: float
+
+
+class ForcedAlignmentResponse(BaseModel):
+    surah: int
+    ayah: int
+    model_id: str
+    reference_text: str
+    normalized_reference: str
+    sample_rate_hz: int
+    audio_duration_ms: float
+    ctc_frame_duration_ms: float
+    path_score: float
+    confidence: float
+    tokens: list[AlignmentToken]
+    words: list[AlignmentWord]

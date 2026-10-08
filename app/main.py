@@ -1,3 +1,4 @@
+import asyncio
 import os
 import tempfile
 from pathlib import Path
@@ -5,13 +6,17 @@ from pathlib import Path
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
+from app.alignment.arabic_ctc import AlignmentModelError
+from app.alignment.factory import get_ctc_aligner
 from app.asr.factory import ASRNotConfigured, describe_asr_mode
+from app.audio.preprocess import AudioPreprocessError, normalize_audio
 from app.persistence.supabase import persistence_configured
 from app.phonetics.alignment import analyze_phonemes
 from app.phonetics.reference import expected_pronunciation
-from app.quran.data import get_surah
+from app.quran.data import get_ayah, get_surah
 from app.schemas import (
     AnalysisResponse,
+    ForcedAlignmentResponse,
     PhonemeAnalysisRequest,
     PhonemeAnalysisResponse,
     TranscriptAnalysisRequest,
@@ -26,7 +31,7 @@ from app.telegram.router import router as telegram_router
 
 app = FastAPI(
     title="Tahsin Bot API",
-    version="0.4.0",
+    version="0.5.0",
     description="Quran recitation analysis gateway and Telegram webhook.",
 )
 
@@ -37,7 +42,7 @@ app.include_router(telegram_router)
 def root():
     return {
         "name": "Tahsin Bot API",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "docs": "/docs",
         "health": "/health",
         "telegram_webhook": "/telegram/webhook",
@@ -48,7 +53,7 @@ def root():
 def health():
     return {
         "status": "ok",
-        "milestone": "M3-accuracy-lab-phoneme-ground-truth",
+        "milestone": "M4-ctc-forced-alignment",
         "asr_mode": describe_asr_mode(),
         "persistence_configured": persistence_configured(),
         "telegram_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
@@ -154,4 +159,53 @@ def analyze_observed_phonemes(payload: PhonemeAnalysisRequest):
         "expected_phonemes": expected,
         "observed_phonemes": payload.observed_phonemes,
         **analysis,
+    }
+
+
+@app.post("/v1/align/audio", response_model=ForcedAlignmentResponse)
+async def align_audio(
+    surah: int = Form(...),
+    ayah: int = Form(...),
+    audio: UploadFile = File(...),
+):
+    reference = get_ayah(surah, ayah)
+    if not reference:
+        raise HTTPException(
+            status_code=404,
+            detail="Ayah not available in the current MVP reference set",
+        )
+
+    suffix = Path(audio.filename or "recitation.ogg").suffix or ".ogg"
+    payload = await audio.read()
+    if not payload:
+        raise HTTPException(status_code=400, detail="Audio file is empty")
+
+    with tempfile.TemporaryDirectory(prefix="tahsin-align-") as tmp:
+        tmp_dir = Path(tmp)
+        raw_path = tmp_dir / f"input{suffix}"
+        normalized_path = tmp_dir / "normalized.wav"
+        raw_path.write_bytes(payload)
+
+        try:
+            await asyncio.to_thread(
+                normalize_audio,
+                raw_path,
+                normalized_path,
+            )
+        except AudioPreprocessError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+        try:
+            result = await asyncio.to_thread(
+                get_ctc_aligner().align,
+                normalized_path,
+                reference,
+            )
+        except AlignmentModelError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return {
+        "surah": surah,
+        "ayah": ayah,
+        **result,
     }

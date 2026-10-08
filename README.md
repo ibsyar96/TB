@@ -178,3 +178,31 @@ New endpoints:
 - `POST /v1/analyze/phonemes`
 
 The phoneme endpoint is intentionally model-agnostic: a future audio phoneme recognizer can submit observed phonemes, while the same deterministic alignment layer scores substitutions, deletions, and insertions.
+
+
+## CTC forced alignment
+
+The next Tahsin layer aligns a known Quran reference against the reciter's
+audio instead of trusting ASR text alone.
+
+```text
+voice / OGG
+  -> ffmpeg mono 16 kHz WAV
+  -> Arabic Wav2Vec2 CTC frame probabilities
+  -> Viterbi forced alignment
+  -> token timestamps
+  -> word timestamps
+  -> confidence
+```
+
+Endpoint:
+
+- `POST /v1/align/audio` with multipart fields `surah`, `ayah`, and `audio`
+
+The default alignment model is
+`jonatasgrosman/wav2vec2-large-xlsr-53-arabic`. In the Vercel Docker path it
+is baked into the image and addressed through `TAHSIN_ALIGNMENT_MODEL`.
+
+This endpoint is an infrastructure milestone. A timestamp is not yet a Tajweed
+verdict. Madd and ghunnah grading will consume these timings only after the
+alignment is validated against teacher-labelled audio.
