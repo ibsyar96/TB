@@ -1,10 +1,11 @@
 import asyncio
+from contextlib import asynccontextmanager
 import os
 import tempfile
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
 
 from app.alignment.arabic_ctc import AlignmentModelError
 from app.alignment.factory import get_ctc_aligner
@@ -14,6 +15,7 @@ from app.persistence.supabase import persistence_configured
 from app.phonetics.alignment import analyze_phonemes
 from app.phonetics.reference import expected_pronunciation
 from app.quran.data import get_ayah, get_surah
+from app.security.api_key import require_private_api_key
 from app.schemas import (
     AnalysisResponse,
     ForcedAlignmentResponse,
@@ -28,11 +30,19 @@ from app.services.recitation import (
     analyze_transcription,
 )
 from app.telegram.router import router as telegram_router
+from app.telegram.bootstrap import register_production_webhook
+
+@asynccontextmanager
+async def lifespan(app):
+    app.state.telegram_webhook_status = await register_production_webhook()
+    yield
+
 
 app = FastAPI(
     title="Tahsin Bot API",
     version="0.5.0",
     description="Quran recitation analysis gateway and Telegram webhook.",
+    lifespan=lifespan,
 )
 
 app.include_router(telegram_router)
@@ -57,6 +67,9 @@ def health():
         "asr_mode": describe_asr_mode(),
         "persistence_configured": persistence_configured(),
         "telegram_configured": bool(os.getenv("TELEGRAM_BOT_TOKEN")),
+        "telegram_webhook_registration": getattr(
+            app.state, "telegram_webhook_status", "not-attempted"
+        ),
     }
 
 
@@ -89,6 +102,7 @@ async def analyze_audio(
     telegram_username: str | None = Form(default=None),
     display_name: str | None = Form(default=None),
     persist: bool = Form(default=True),
+    _api_authorized: None = Depends(require_private_api_key),
 ):
     suffix = Path(audio.filename or "recitation.ogg").suffix or ".ogg"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temp:
@@ -167,6 +181,7 @@ async def align_audio(
     surah: int = Form(...),
     ayah: int = Form(...),
     audio: UploadFile = File(...),
+    _api_authorized: None = Depends(require_private_api_key),
 ):
     reference = get_ayah(surah, ayah)
     if not reference:
