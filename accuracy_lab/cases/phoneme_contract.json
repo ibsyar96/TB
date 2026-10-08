@@ -1,0 +1,46 @@
+[
+  {
+    "id": "phoneme-perfect-h",
+    "expected": ["ħ", "a", "m", "d"],
+    "observed": ["ħ", "a", "m", "d"],
+    "expected_counts": {
+      "correct": 4,
+      "substitution": 0,
+      "deletion": 0,
+      "insertion": 0
+    }
+  },
+  {
+    "id": "phoneme-substitution-ha",
+    "expected": ["ħ", "a", "m", "d"],
+    "observed": ["h", "a", "m", "d"],
+    "expected_counts": {
+      "correct": 3,
+      "substitution": 1,
+      "deletion": 0,
+      "insertion": 0
+    }
+  },
+  {
+    "id": "phoneme-deletion-long-vowel",
+    "expected": ["ʕ", "a:", "l", "a", "m"],
+    "observed": ["ʕ", "l", "a", "m"],
+    "expected_counts": {
+      "correct": 4,
+      "substitution": 0,
+      "deletion": 1,
+      "insertion": 0
+    }
+  },
+  {
+    "id": "phoneme-insertion",
+    "expected": ["r", "a", "b"],
+    "observed": ["r", "a", "b", "b"],
+    "expected_counts": {
+      "correct": 3,
+      "substitution": 0,
+      "deletion": 0,
+      "insertion": 1
+    }
+  }
+]
