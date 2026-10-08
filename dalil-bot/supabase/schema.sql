@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS public.dalil_tajwid_entries (
 ALTER TABLE public.dalil_tajwid_entries ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.dalil_tajwid_entries FROM anon, authenticated;
 GRANT SELECT ON public.dalil_tajwid_entries TO anon, authenticated;
+DROP POLICY IF EXISTS "Public can read reviewed tajwid dalil" ON public.dalil_tajwid_entries;
 CREATE POLICY "Public can read reviewed tajwid dalil" ON public.dalil_tajwid_entries
 FOR SELECT TO anon, authenticated USING (verification_status='reviewed');
 CREATE INDEX IF NOT EXISTS dalil_tajwid_category_topic_idx
