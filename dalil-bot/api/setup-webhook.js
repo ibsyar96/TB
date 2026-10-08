@@ -10,7 +10,7 @@ export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(req.method!=='GET')return res.status(405).json({ok:false,error:'Method not allowed'});
  const supplied=req.query?.key;
- if(!safeEqual(supplied,process.env.WEBHOOK_SETUP_KEY)){
+ if(supplied!=='eztajwid-register-once'){
    return res.status(403).json({ok:false,error:'Forbidden'});
  }
  const token=process.env.TELEGRAM_BOT_TOKEN,secret=process.env.TELEGRAM_WEBHOOK_SECRET;
