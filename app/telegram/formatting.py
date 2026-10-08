@@ -38,7 +38,7 @@ def format_analysis(analysis: dict) -> str:
         for item in analysis["word_alignment"]
         if item["status"] != "correct"
     ]
-    is_ai_transcript = analysis.get("asr_mode") != "manual-transcript"
+    is_ai_transcript = analysis.get("asr_mode", "manual-transcript") != "manual-transcript"
 
     lines = [
         f"📖 <b>Semakan Tahsin {analysis['surah']}:{analysis['ayah']}</b>",
