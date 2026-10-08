@@ -206,3 +206,40 @@ is baked into the image and addressed through `TAHSIN_ALIGNMENT_MODEL`.
 This endpoint is an infrastructure milestone. A timestamp is not yet a Tajweed
 verdict. Madd and ghunnah grading will consume these timings only after the
 alignment is validated against teacher-labelled audio.
+
+
+## Secure Telegram activation (production)
+
+Environment variables:
+
+- `TELEGRAM_BOT_TOKEN` (Sensitive; Production)
+- `TELEGRAM_WEBHOOK_SECRET` (Encrypted; Production)
+- `TELEGRAM_WEBHOOK_URL` = `https://tahsinbot1.vercel.app/telegram/webhook`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only; Sensitive; Production)
+- `TAHSIN_API_KEY` (Encrypted; private analysis API calls)
+
+At app startup **in Vercel Production only**, the backend registers
+`TELEGRAM_WEBHOOK_URL` using Telegram's `setWebhook` and the configured
+`TELEGRAM_WEBHOOK_SECRET`, without exposing the BotFather token.
+
+The registration result appears in `GET /health` under
+`telegram_webhook_registration` and may be `registered`,
+`not-configured`, `rejected` or `failed`.
+
+The public Telegram endpoint validates Telegram's
+`X-Telegram-Bot-Api-Secret-Token` request header.
+
+Costly HTTP endpoints `POST /v1/analyze/audio` and `POST /v1/align/audio`
+require `X-Tahsin-API-Key`. In production, if the private key is not
+configured they fail closed. The Telegram voice route uses the separate
+webhook secret and is not affected by this requirement.
+
+Vercel Deployment Protection must allow **public Production** access to
+the assigned webhook URL; Preview deployments should remain protected.
+
+**Known MVP limitation**: Telegram voice analyses currently run inline
+during webhook handling. A slower model/cold start can exceed Telegram's
+delivery timeout, causing duplicate attempts. The production processing
+queue and idempotency work are a separate milestone. Do not advertise
+real-audio Tajwid accuracy until teacher-labelled validation passes.
