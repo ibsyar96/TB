@@ -28,3 +28,11 @@ Copyright (c) 2025 QUD³
 
 The package is used under the MIT License. The copyright notice and permission
 notice must be retained with substantial portions of the software.
+
+
+## Arabic Wav2Vec2 CTC alignment model
+
+Tahsin Bot uses `jonatasgrosman/wav2vec2-large-xlsr-53-arabic` as an Arabic
+CTC acoustic model for forced alignment. The model card publishes it under
+the Apache License 2.0. The alignment algorithm in Tahsin Bot is implemented
+independently as a standard blank-interleaved CTC Viterbi decoder.
