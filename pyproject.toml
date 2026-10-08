@@ -1,6 +1,6 @@
 [project]
 name = "tahsin-bot"
-version = "0.2.0"
+version = "0.5.1"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi==0.116.1",
@@ -8,4 +8,8 @@ dependencies = [
     "python-multipart==0.0.20",
     "pydantic==2.11.7",
     "uvicorn[standard]==0.35.0",
+    "quranic-phonemizer==3.0.1",
 ]
+
+[tool.vercel]
+entrypoint = "app.main:app"
